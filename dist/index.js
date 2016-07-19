@@ -88,23 +88,41 @@ var Transport = exports.Transport = function (_LokkaTransport) {
     key: '_buildOptions',
     value: function _buildOptions(payload) {
       var options = {
-        method: 'post',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json'
-        },
-        body: (0, _stringify2.default)(payload),
+        method: 'POST',
         // To pass cookies to the server. (supports CORS as well)
         credentials: 'include'
       };
+
+      var files = payload.files;
+      if (files) {
+        if (!global.FormData) {
+          throw new Error('Uploading files without `FormData` not supported.');
+        }
+        var formData = new FormData();
+        formData.append('query', payload.query);
+        formData.append('variables', (0, _stringify2.default)(payload.variables));
+        for (var filename in files) {
+          if (files.hasOwnProperty(filename)) {
+            formData.append(filename, files[filename]);
+          }
+        }
+        options.body = formData;
+        options.headers = {};
+      } else {
+        options.body = (0, _stringify2.default)(payload);
+        options.headers = {
+          Accept: 'application/json',
+          'Content-Type': 'application/json'
+        };
+      }
 
       (0, _assign2.default)(options.headers, this._httpOptions.headers);
       return options;
     }
   }, {
     key: 'send',
-    value: function send(query, variables, operationName) {
-      var payload = { query: query, variables: variables, operationName: operationName };
+    value: function send(query, variables, files, operationName) {
+      var payload = { query: query, variables: variables, files: files, operationName: operationName };
       var options = this._buildOptions(payload);
 
       return fetchUrl(this.endpoint, options).then(function (response) {
